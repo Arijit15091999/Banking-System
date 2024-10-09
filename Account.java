@@ -24,4 +24,13 @@ public class Account {
     public String getAccountType() {
         return this.accountType;
     }
+
+    @Override
+    public String toString() {
+
+        return "\naccount_id:- " + this.accountId +
+                "\nbalance:- " + balance +
+                "\nbranchId:- " + branchId +
+                "\naccountType:- " + accountType + "\n";
+    }
 }

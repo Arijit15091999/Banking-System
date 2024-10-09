@@ -114,6 +114,15 @@ public class AccountDAO implements AccountDAOInterface{
         return account;
     }
 
+    public void showAllAccounts() {
+        List<Account> list = getAllAccounts();
+        System.out.println("------------------Accounts-------------");
+        for(Account account : list) {
+            System.out.println(account);
+            System.out.println("--------------------------------------");
+        }
+    }
+
     @Override
     public List<Account> getAllAccounts() {
         String query = "SELECT * FROM account";
@@ -137,6 +146,7 @@ public class AccountDAO implements AccountDAOInterface{
         return accounts;
     }
 
+
     private List<Account> getAllAccountsHelper(ResultSet resultSet) throws SQLException {
         List<Account> accounts = new ArrayList<>();
         while(resultSet.next()) {
@@ -155,9 +165,6 @@ public class AccountDAO implements AccountDAOInterface{
     @Override
     public boolean updateAccount(int accountId, Map<String, String> map) throws SQLException {
         String query = "SELECT * FROM account WHERE account_id = ?";
-        String updateQueryFront = "UPDATE ACCOUNT SET ";
-        String updateQueryBack = "WHERE account_id = ?";
-        StringBuilder sb = new StringBuilder(updateQueryFront);
 
         connection.setAutoCommit(false);
         Savepoint savepoint = connection.setSavepoint();
@@ -189,31 +196,58 @@ public class AccountDAO implements AccountDAOInterface{
                 return false;
             }
 
-            for(Pair pair : list) {
-                int key = pair.keyInt;
-                String value = pair.value;
-                String columnName = resultSetMetaData.getColumnName(key);
-                String temp = " " + columnName + " = " + value + " ";
-                sb.append(temp);
-            }
+            String updateQuery = processQueryString(list, resultSetMetaData);
+            PreparedStatement updateStatement = connection.prepareStatement(
+                    updateQuery
+            );
 
-            sb.append(updateQueryBack);
+            updateStatement.setInt(1, accountId);
 
-
-            Statement updateStatement = connection.createStatement();
-
-            int rowsAffected = updateStatement.executeUpdate(sb.toString());
+            int rowsAffected = updateStatement.executeUpdate();
 
             DatabaseUtils.printRowsAffected(rowsAffected);
 
             updateStatement.close();
             connection.commit();
         }catch(SQLException e) {
+            System.out.println("transaction failed");
+            System.out.println("rolling back................");
+            connection.rollback(savepoint);
 
+            if(!DatabaseUtils.ignoreSqlException(e.getSQLState())) {
+                DatabaseUtils.printSQLException(e);
+            }
         }finally {
             connection.setAutoCommit(true);
         }
         return false;
+    }
+
+    private String processQueryString(List<Pair> list, ResultSetMetaData resultSetMetaData) throws SQLException{
+        String updateQueryFront = " UPDATE ACCOUNT SET ";
+        String updateQueryBack = " WHERE account_id = ? ";
+        StringBuilder sb = new StringBuilder(updateQueryFront);
+
+        for(int i = 0; i < list.size(); i++) {
+            Pair pair = list.get(i);
+            int key = pair.keyInt;
+            String value = pair.value;
+            String columnName = resultSetMetaData.getColumnName(key);
+            if(columnName.equals("account_id")) continue;
+            String temp = " " + columnName + " = " + value;
+
+            if(i != list.size() - 1) {
+                temp += ",";
+            }
+            sb.append(temp);
+        }
+
+        sb.append(updateQueryBack);
+
+//        System.out.println(sb.toString());
+
+        return sb.toString();
+
     }
 
     @Override
