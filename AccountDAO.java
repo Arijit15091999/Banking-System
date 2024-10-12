@@ -1,17 +1,23 @@
 import Utility.Pair;
-
-import javax.swing.plaf.nimbus.State;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class AccountDAO implements AccountDAOInterface{
     private final Connection connection;
-    public AccountDAO(Connection connection) {
+    private AccountDAO accountDAO;
+
+    private AccountDAO(Connection connection) {
         this.connection = connection;
         this.createTable();
+    }
+
+    public AccountDAO getInstance(Connection connection) {
+        if(accountDAO == null) {
+            accountDAO = new AccountDAO(connection);
+        }
+        return accountDAO;
     }
 
 

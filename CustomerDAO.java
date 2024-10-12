@@ -1,39 +1,49 @@
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
-public class BankerDAO implements BankerDAOInterface{
-    private final Connection connection;
-    private BankerDAO bankerDAO;
+public class CustomerDAO implements CustomerDAOInterface{
+    private Connection connection;
+    private CustomerDAO customerDAO;
 
-    private BankerDAO(Connection connection) {
+    private CustomerDAO (Connection connection) {
         this.connection = connection;
-        createTable();
     }
 
-    public BankerDAO getInstance(Connection connection) {
-        if(bankerDAO == null) {
-            bankerDAO = new BankerDAO(connection);
+    public CustomerDAO getInstance(Connection connection) {
+        if(customerDAO == null) {
+            customerDAO = new CustomerDAO(connection);
         }
-        return this.bankerDAO;
+        return this.customerDAO;
     }
 
-    private static Banker getDefaultBanker() {
-        return new Banker("unknown", -1, -1);
+    public static Customer getDefaultCustomer() {
+        return new Customer(
+                -1,
+                "Unknown",
+                new Date(),
+                "0000000000",
+                -1
+        );
     }
 
     @Override
     public void createTable() {
-        String query = "CREATE TABLE banker_info(" +
-                "banker_id INT NOT NULL AUTO_INCREMENT," +
-                "banker_name VARCHAR(255) NOT NULL," +
-                "branch_id INT NOT NULL," +
-                "PRIMARY KEY (banker_id)," +
-                "FOREIGN KEY (branch_id) REFERENCES branch(branch_id));";
+        String query = "CREATE TABLE customer(" +
+                    "customer_id INT NOT NULL AUTO_INCREMENT," +
+                    "customer_name VARCHAR(30) NOT NULL," +
+                    "mobileno VARCHAR(10) NOT NULL," +
+                    "dob DATE," +
+                    "account_id INT NOT NULL," +
+                    "PRIMARY KEY (customer_id)," +
+                    "FOREIGN KEY (account_id) REFERENCES account(account_id)";
+);
+
 
         try(Statement statement = this.connection.createStatement()){
             int rowsAffected = statement.executeUpdate(query);
-            System.out.println("BANKER_INFO TABLE CREATED");
+            System.out.println("CUSTOMER TABLE CREATED");
             DatabaseUtils.printRowsAffected(rowsAffected);
         }catch(SQLException e) {
             if(!DatabaseUtils.ignoreSqlException(e.getSQLState())) {
@@ -42,21 +52,23 @@ public class BankerDAO implements BankerDAOInterface{
         }
     }
 
+
+
     @Override
-    public void createBanker(Banker banker) throws SQLException {
-        String query = "INSERT INTO banker_info (banker_name, branch_id) VALUES (?, ?)";
+    public void createCustomer(Customer customer) throws SQLException {
+        String query = "INSERT INTO customer (customer_name, mobileno, dob, account_id) VALUES (?, ?, ?, ?)";
         connection.setAutoCommit(false);
         Savepoint savepoint = connection.setSavepoint();
 
-        try(PreparedStatement statement = this.connection.prepareStatement(
-                query,
-                ResultSet.TYPE_SCROLL_SENSITIVE,
-                ResultSet.CONCUR_UPDATABLE,
-                ResultSet.CLOSE_CURSORS_AT_COMMIT
-        )){
-            statement.setString(1, banker.getName());
-            statement.setInt(2, banker.getBranchId());
-
+        try(
+                PreparedStatement statement = this.connection.prepareStatement(
+                    query,
+                    ResultSet.TYPE_SCROLL_SENSITIVE,
+                    ResultSet.CONCUR_UPDATABLE,
+                    ResultSet.CLOSE_CURSORS_AT_COMMIT
+                )
+        ){
+            
             int rowsAffected = statement.executeUpdate();
 
             DatabaseUtils.printRowsAffected(rowsAffected);
@@ -75,7 +87,7 @@ public class BankerDAO implements BankerDAOInterface{
     }
 
     @Override
-    public Banker getBankerWithID(int bankerId) throws SQLException {
+    public Customer getCustomerWithID(int bankerId) throws SQLException {
         String getQuery = "SELECT * FROM banker_info WHERE banker_id = ?";
         Banker banker = getDefaultBanker();
 
@@ -104,7 +116,7 @@ public class BankerDAO implements BankerDAOInterface{
     }
 
     @Override
-    public List<Banker> getAllBanker() {
+    public List<Customer> getAllCustomer() {
         String getQuery = "SELECT * FROM banker_info";
         Banker banker = getDefaultBanker();
         List<Banker> list = new ArrayList<>();
@@ -236,7 +248,7 @@ public class BankerDAO implements BankerDAOInterface{
     }
 
     @Override
-    public boolean deleteBanker(int bankerId) throws SQLException {
+    public boolean deleteCustomer(int customerId) throws SQLException {
         String selectQuery = "SELECT * FROM banker_info WHERE banker_id = ?";
         String deleteQuery = "DELETE FROM banker_info WHERE banker_id = ?";
 
@@ -289,17 +301,11 @@ public class BankerDAO implements BankerDAOInterface{
         return isSuccessful;
     }
 
-    private void printBankers(ResultSet resultSet) throws SQLException{
+    private void printCustomers(ResultSet resultSet) throws SQLException{
         if(resultSet.isLast()) return;
         System.out.println("----------------------------------------------");
         while(resultSet.next()) {
-            int bankerId = resultSet.getInt(1);
-            String name = resultSet.getString(2);
-            int branchId = resultSet.getInt(3);
 
-            System.out.println("BankerID:- " + bankerId);
-            System.out.println("Name:- " + name);
-            System.out.println("BranchId:- " + branchId);
             System.out.println("----------------------------------------------");
         }
     }
